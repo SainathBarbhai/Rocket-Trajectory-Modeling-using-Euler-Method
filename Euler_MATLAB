@@ -1,0 +1,92 @@
+%%MATLAB program for modeling rocket trajectory using Forward euler
+%%method-->
+
+clear all; clc; close all;
+
+%given data-->
+tstart= 0; %sec
+tb= 1; %sec
+isp= 120;  %sec
+g= 32.2;   %ft/sec2
+c= isp*g; %ft/sec
+mi= 4; %lbf
+mp= 0.4; %lbm
+zeta= mp/mi;
+theta= 80; %degree
+h= 0.01; %time step (sec)
+Timepower= tstart:h:tb; %sec
+N1= (tb-tstart)/h; %no of iteration powered
+
+
+%theortical powered fligh phase(no drag)-->
+Vx_tb= -c*log(1-zeta)*cosd(theta);
+Vy_tb= -c*log(1-zeta)*sind(theta)- (g*sind(theta)*tb);
+time_array= [tstart, tb];
+% V= [0, sqrt((Vx_tb)^2+(Vy_tb)^2)];
+hx_tb_theo= [0, -c*(-tb+((zeta-1))*log(1-zeta)/(zeta/tb))*cosd(80)];
+hy_tb_theo= [0, -c*(-tb+((zeta-1))*log(1-zeta)/(zeta/tb))*sind(80)-(0.5*g*tb^2*sind(80))];
+% plot(hx_theo, hy_theo)
+t2_theo= Vy_tb/g;
+t2= t2_theo+tstart;
+Timeapogee= tstart:h:t2;
+N2= (t2-tb)/h; %no of iteration
+hy_apogee_theo= hy_tb_theo(end) + (Vy_tb*t2)- (0.5*g*sind(theta)*t2^2);
+hx_apogee_theo= hx_tb_theo(end) + Vx_tb*t2;
+
+for i=1:N1
+    %powered flight euler method-->
+    h_x(i)= -c*(-Timepower(i)+(((zeta*Timepower(i))/tb)-1)*(log(1-((zeta*Timepower(i))/tb))/(zeta/tb)))*cosd(theta);
+    hx_diff = -c*log(1-((zeta*Timepower(i)/tb)));
+    h_x(i+1)= h_x(i)+ h* hx_diff;
+
+    h_y(i)= -c*(-Timepower(i)+(((zeta*Timepower(i))/tb)-1)*(log(1-((zeta*Timepower(i))/tb))/(zeta/tb)))*sind(80)-(0.5*g*Timepower(i)^2*sind(theta));
+    hy_diff = -c*log(1-((zeta*Timepower(i)/tb)))-(g*sind(theta)*Timepower(i));
+    h_y(i+1)= h_y(i)+ h* hy_diff;
+end
+plot(h_x, h_y)
+hold on
+
+for i=1:N2
+    %unpowered flight upto apogee-->
+    h_xa(i)= h_x(end) + Vx_tb*Timeapogee(i);
+    hxa_diff = Vx_tb;
+    h_xa(i+1)= h_xa(i)+ h* hxa_diff;
+
+    h_ya(i)= h_y(end) + Vy_tb*Timeapogee(i) - (0.5*g*Timeapogee(i)^2*sind(theta));
+    hya_diff = -(g*sind(theta)*Timeapogee(i));
+    h_ya(i+1)= h_ya(i) + h* hya_diff;
+end
+
+plot(h_xa, h_ya)
+
+
+% to find time for impact (t3)-->
+t3= sqrt(h_ya(end)/(g/2))+t2+tstart;
+
+Timeimpact= tstart:h:t3;
+N3= (t3-t2)/h;
+
+% disp(Vx_t2)
+
+for i=1:N3
+    %unpowered flight until impact-->
+    h_xi(i)= h_xa(end) + Vx_tb*Timeimpact(i);
+
+    hxi_diff = Vx_tb;
+    h_xi(i+1)= h_xi(i)+ h* hxi_diff;
+
+    h_yi(i)= h_ya(end) - (0.5*g*(Timeimpact(i)^2)*sind(theta));
+    hyi_diff = Vy_tb- (g*sind(theta)*Timeimpact(i));
+    h_yi(i+1)= h_yi(i) + h* hyi_diff;
+end
+
+plot(h_xi, h_yi)
+
+title("Rocket Trajectory- Euler")
+xlabel('x distance traveled (feet)')
+ylabel('y distance traveled (feet)')
+legend('Powered flight_Euler' ,'Unpowered Ballistic motion_Euler', "Apogee to impact_Euler")
+
+%Error Calulation-->
+Error_Euler= abs(hy_apogee_theo- h_ya(end))
+
